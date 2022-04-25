@@ -20,9 +20,10 @@ class IGraphDataset(InMemoryDataset):
         label_path,
         transform=None,
         pre_transform=None,
+        are_directed=False,
     ):
         self.label_path = label_path
-
+        self.are_directed = are_directed  # if graphs in dataset directed
         self.label_encoder = preprocessing.LabelEncoder()
         self.labels = None
         self.init_graph_labels()
@@ -71,16 +72,16 @@ class IGraphDataset(InMemoryDataset):
         e_num = iG.ecount()
         coo_format_edges = list(zip(*iG.get_edgelist()))
 
-        # add back-edges manually for undirected graph
-        source_nodes, sink_nodes = coo_format_edges[0], coo_format_edges[1]
-        coo_format_edges[0] += sink_nodes
-        coo_format_edges[1] += source_nodes
-        pyg_edge_index = torch.LongTensor(coo_format_edges)
+        if not self.are_directed:
+            # add back-edges manually for undirected graph
+            source_nodes, sink_nodes = coo_format_edges[0], coo_format_edges[1]
+            coo_format_edges[0] += sink_nodes
+            coo_format_edges[1] += source_nodes
+            pyg_edge_index = torch.LongTensor(coo_format_edges)
         print(f"Edge coo matrix has shape {pyg_edge_index.shape}")
 
-        # TODO: SEEMS WE NEED TO ADD BACK EDGE MANUALLY FOR UNDIRECTED GRAPHS!
-
-        assert pyg_edge_index.shape == (2, e_num * 2)
+        expected_edge_num = e_num if self.are_directed else e_num * 2
+        assert pyg_edge_index.shape == (2, expected_edge_num)
         return pyg_edge_index
 
     def get_raw_edge_arrts_from_igraph(
