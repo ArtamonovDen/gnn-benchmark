@@ -1,10 +1,16 @@
+import igraph as ig
 from pathlib import Path
 import os
-import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 import torch
 
 from datasets.igraph_dataset import IGraphDataset
+
+
+def get_dataset():
+    root = "/home/friday/projects/hse_gnn/datasets/Mutag"
+    label_path = os.path.join(root, "Mutag.txt")
+    return MutagDataset(root, label_path)
 
 
 class MutagDataset(IGraphDataset):
@@ -39,12 +45,6 @@ class MutagDataset(IGraphDataset):
         torch.save((data, slices), self.processed_paths[0])
 
 
-root = "/home/friday/projects/hse_gnn/Netpro2vec/data/Mutag"
-label_path = os.path.join(root, "Mutag.txt")
-g = MutagDataset(root, label_path)
-print(g)
-
-
 """
 from torch_geometric.datasets import TUDataset
 dataset = TUDataset(root="data/TUDataset", name="MUTAG")
@@ -53,12 +53,4 @@ Data(x=[3371, 7], edge_index=[2, 7442], edge_attr=[7442, 4], y=[188])
 >>> g.data
 # Data(x=[3371, 1], edge_index=[2, 3721], edge_attr=[3721, 1], y=[188])
 Data(x=[3371, 7], edge_index=[2, 7442], y=[188]) # UPDATED
-"""
-
-# TODO: WHY?
-"""
->>> dataset.data.is_undirected()
-False
->>> g.data.is_undirected()
-True
 """
