@@ -4,7 +4,7 @@ import os
 from sklearn.preprocessing import OneHotEncoder
 import torch
 
-from datasets.igraph_dataset import IGraphDataset
+from dataset.igraph_dataset import IGraphDataset
 
 
 def get_dataset():
