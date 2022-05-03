@@ -89,10 +89,11 @@ class TumorBrainDataset(Dataset):
     def __init__(self, root, label_path, transform=None, pre_transform=None):
         self.label_path = label_path
         self.are_directed = False  # if graphs in dataset directed
+        # TODO: add check if processed
         self.label_encoder = preprocessing.LabelEncoder()
         self.labels = init_graph_labels(label_path, self.label_encoder)
 
-        super().__init__(root, label_path, transform, pre_transform)
+        super().__init__(root, transform, pre_transform)
 
     @property
     def raw_dir(self) -> str:
@@ -105,15 +106,20 @@ class TumorBrainDataset(Dataset):
     @property
     def processed_file_names(self) -> List[str]:
         if Path(self.processed_dir).exists():
-            # TODO: use glob to filter data_idx.pt
-            return sorted(Path(self.processed_dir).iterdir())
+            return sorted(Path(self.processed_dir).glob("data_*.pt"))
 
         return []
 
+    @property
+    def num_classes(self):
+        # TODO: just for Brain dataset for now!
+        return 7
+
     def process(self):
         skipped = []
-        for idx, graph_path in enumerate(self.raw_file_names):
-            print(f"{idx}: processing {graph_path.resolve()}")
+        idx = 0
+        for i, graph_path in enumerate(self.raw_file_names):
+            print(f"{i}: processing {graph_path.resolve()}")
 
             graph_name = graph_path.stem.split("_")[1]  # remove meanSum prefix
             y = get_label_for_graph(self.labels, graph_name)
@@ -129,8 +135,9 @@ class TumorBrainDataset(Dataset):
             )
             x = get_degree_matrix(iG)
             data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edges_weights)
-            print(f"Saving Data object {data}")
+            print(f"{idx}| Saving Data object {data}")
             torch.save(data, os.path.join(self.processed_dir, f"data_{idx}.pt"))
+            idx += 1
         print(f"Skipped {len(skipped)}: {skipped}")
 
     def len(self):
