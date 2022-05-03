@@ -7,7 +7,11 @@ import igraph as ig
 import pandas as pd
 
 from torch_geometric.data import Data, InMemoryDataset, Dataset
-from dataset.igraph_tools import get_degree_matrix, get_edges_from_igraph
+from dataset.igraph_tools import (
+    get_degree_matrix,
+    get_edges_from_igraph,
+    get_edges_with_weghts_from_igraph,
+)
 
 
 def init_graph_labels(label_path, label_encoder):
@@ -74,7 +78,7 @@ class TumorBrainInMemoryDataset(InMemoryDataset):
             x = get_degree_matrix(iG)
 
             # Create Data object
-            graph = Data(x=x, edge_index=edge_index, y=y)
+            graph = Data(x=x, edge_index=edge_index, y=y)  # TODO: no weights yet!
             graph_data_list.append(graph)
 
         data, slices = self.collate(graph_data_list)
@@ -101,10 +105,13 @@ class TumorBrainDataset(Dataset):
     @property
     def processed_file_names(self) -> List[str]:
         if Path(self.processed_dir).exists():
+            # TODO: use glob to filter data_idx.pt
             return sorted(Path(self.processed_dir).iterdir())
+
         return []
 
     def process(self):
+        skipped = []
         for idx, graph_path in enumerate(self.raw_file_names):
             print(f"{idx}: processing {graph_path.resolve()}")
 
@@ -113,13 +120,18 @@ class TumorBrainDataset(Dataset):
 
             if y is None:
                 print(f"Skip graph {graph_name} as it has no label")
+                skipped.append(graph_name)
                 continue
 
             iG: ig.Graph = ig.load(graph_path)
-            edge_index = get_edges_from_igraph(iG, self.are_directed)
+            edge_index, edges_weights = get_edges_with_weghts_from_igraph(
+                iG, self.are_directed
+            )
             x = get_degree_matrix(iG)
-            data = Data(x=x, edge_index=edge_index, y=y)
+            data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edges_weights)
+            print(f"Saving Data object {data}")
             torch.save(data, os.path.join(self.processed_dir, f"data_{idx}.pt"))
+        print(f"Skipped {len(skipped)}: {skipped}")
 
     def len(self):
         return len(self.processed_file_names)
@@ -127,3 +139,6 @@ class TumorBrainDataset(Dataset):
     def get(self, idx):
         data = torch.load(os.path.join(self.processed_dir, f"data_{idx}.pt"))
         return data
+
+
+# https://pytorch-geometric.readthedocs.io/en/latest/modules/utils.html#torch_geometric.utils.get_laplacian

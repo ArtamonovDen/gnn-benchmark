@@ -3,6 +3,8 @@ import igraph as ig
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 
+from torch_sparse import SparseTensor
+
 
 def get_edges_from_igraph(iG: ig.Graph, is_directed: bool) -> torch.LongTensor:
     """
@@ -18,12 +20,37 @@ def get_edges_from_igraph(iG: ig.Graph, is_directed: bool) -> torch.LongTensor:
         source_nodes, sink_nodes = coo_format_edges[0], coo_format_edges[1]
         coo_format_edges[0] += sink_nodes
         coo_format_edges[1] += source_nodes
-    pyg_edge_index = torch.tensor(coo_format_edges, dtype=torch.int64)
+    pyg_edge_index = torch.tensor(coo_format_edges, dtype=torch.long)
     print(f"Edge coo matrix has shape {pyg_edge_index.shape}")
 
     expected_edge_num = e_num if is_directed else e_num * 2
     assert pyg_edge_index.shape == (2, expected_edge_num)
     return pyg_edge_index
+
+
+def get_edges_with_weghts_from_igraph(iG: ig.Graph, is_directed: bool):
+    """
+    Returns Pytorch Geometric edge representation as torch.tensor of
+    pairs of node and list of weights corresponding to each node
+    """
+    edges, edges_weights = [], []
+    for e in iG.es:
+        source, target = e.source, e.target
+        weight = e["weight"]
+        if is_directed:
+            edges.append((source, target), (target, source))
+            edges_weights.extend([weight, weight])  # store twice for each directed edge
+        else:
+            edges.extend([(source, target), (target, source)])
+            edges_weights.extend([weight, weight])  # store twice for each directed edge
+
+    coo_format_edges = list(zip(*edges))
+    edge_index = torch.tensor(coo_format_edges, dtype=torch.long)
+    edges_weights = torch.tensor(edges_weights, dtype=torch.float).reshape((1, -1))
+    # TODO: edge weights to tensor
+    print(f"Edge coo matrix has shape {edge_index.shape}")
+    print(f"Sample of edge weights: {edges_weights[:10]}")
+    return edge_index, edges_weights
 
 
 def get_degree_matrix(iG: ig.Graph) -> torch.FloatTensor:
@@ -40,7 +67,7 @@ def get_degree_matrix(iG: ig.Graph) -> torch.FloatTensor:
     return d
 
 
-def get_adj_matrix(self, iG: ig.Graph) -> torch.FloatTensor:
+def get_adj_matrix(iG: ig.Graph) -> torch.FloatTensor:
     """
     Returns adjacensy matrix as torch.tensor
     """
