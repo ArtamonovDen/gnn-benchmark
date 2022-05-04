@@ -3,8 +3,6 @@ import igraph as ig
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 
-from torch_sparse import SparseTensor
-
 
 def get_edges_from_igraph(iG: ig.Graph, is_directed: bool) -> torch.LongTensor:
     """
@@ -28,7 +26,7 @@ def get_edges_from_igraph(iG: ig.Graph, is_directed: bool) -> torch.LongTensor:
     return pyg_edge_index
 
 
-def get_edges_with_weghts_from_igraph(iG: ig.Graph, is_directed: bool):
+def get_edges_with_weghts_from_igraph(iG: ig.Graph):
     """
     Returns Pytorch Geometric edge representation as torch.tensor of
     pairs of node and list of weights corresponding to each node
@@ -37,12 +35,8 @@ def get_edges_with_weghts_from_igraph(iG: ig.Graph, is_directed: bool):
     for e in iG.es:
         source, target = e.source, e.target
         weight = e["weight"]
-        if is_directed:
-            edges.append((source, target), (target, source))
-            edges_weights.extend([weight, weight])  # store twice for each directed edge
-        else:
-            edges.extend([(source, target), (target, source)])
-            edges_weights.extend([weight, weight])  # store twice for each directed edge
+        edges.append((source, target))
+        edges_weights.append(weight)  # store twice for each directed edge
 
     coo_format_edges = list(zip(*edges))
     edge_index = torch.tensor(coo_format_edges, dtype=torch.long)

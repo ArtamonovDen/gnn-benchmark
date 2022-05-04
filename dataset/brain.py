@@ -88,7 +88,7 @@ class TumorBrainInMemoryDataset(InMemoryDataset):
 class TumorBrainDataset(Dataset):
     def __init__(self, root, label_path, transform=None, pre_transform=None):
         self.label_path = label_path
-        self.are_directed = False  # if graphs in dataset directed
+        self.are_directed = True  # if graphs in dataset directed
         # TODO: add check if processed
         self.label_encoder = preprocessing.LabelEncoder()
         self.labels = init_graph_labels(label_path, self.label_encoder)
@@ -130,9 +130,8 @@ class TumorBrainDataset(Dataset):
                 continue
 
             iG: ig.Graph = ig.load(graph_path)
-            edge_index, edges_weights = get_edges_with_weghts_from_igraph(
-                iG, self.are_directed
-            )
+            # is_directed = iG.is_directed()
+            edge_index, edges_weights = get_edges_with_weghts_from_igraph(iG)
             x = get_degree_matrix(iG)
             data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edges_weights)
             print(f"{idx}| Saving Data object {data}")
