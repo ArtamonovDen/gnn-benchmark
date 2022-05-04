@@ -17,8 +17,9 @@ def train():
         optimizer.zero_grad()
         data = data.to(device)
 
-        out = model(data.x, data.edge_index, data.batch, data.edge_attr)
-        loss = F.nll_loss(out, data.y)
+        out = model(data.x, data.edge_index, data.edge_attr, data.batch)
+        # loss = F.nll_loss(out, data.y)
+        loss = criterion(out, data.y)
         loss.backward()
         loss_all += loss.item() * data.num_graphs
         optimizer.step()  # Update parameters based on gradients.
@@ -31,13 +32,13 @@ def test(loader):
     correct = 0
     for data in tqdm(loader):  # Iterate in batches over the training/test dataset.
         data = data.to(device)
-        out = model(data.x, data.edge_index, data.batch, data.edge_attr)
+        out = model(data.x, data.edge_index, data.edge_attr, data.batch)
 
-        pred = out.max(dim=1)[1]
-        correct += pred.eq(data.y).sum().item()
+        # pred = out.max(dim=1)[1]
+        # correct += pred.eq(data.y).sum().item()
 
-        # pred = out.argmax(dim=1)  # Use the class with highest probability.
-        # correct += int((pred == data.y).sum())  # Check against ground-truth labels.
+        pred = out.argmax(dim=1)  # Use the class with highest probability.
+        correct += int((pred == data.y).sum())  # Check against ground-truth labels.
     return correct / len(loader.dataset)  # Derive ratio of correct predictions.
 
 
@@ -64,7 +65,7 @@ if __name__ == "__main__":
 
     device = "cpu"  # torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = GraphGCN(
+    model = VanilaGCN(
         num_node_features=dataset.num_node_features,
         hidden_channels=64,
         num_classes=dataset.num_classes,
