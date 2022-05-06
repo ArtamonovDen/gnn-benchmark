@@ -40,10 +40,8 @@ def get_edges_with_weghts_from_igraph(iG: ig.Graph):
 
     coo_format_edges = list(zip(*edges))
     edge_index = torch.tensor(coo_format_edges, dtype=torch.long)
-    edges_weights = torch.tensor(edges_weights, dtype=torch.float).reshape((1, -1))
-    # TODO: edge weights to tensor
+    edges_weights = torch.tensor(edges_weights, dtype=torch.float).reshape((-1, 1))
     print(f"Edge coo matrix has shape {edge_index.shape}")
-    print(f"Sample of edge weights: {edges_weights[:10]}")
     return edge_index, edges_weights
 
 
@@ -63,10 +61,10 @@ def get_degree_matrix(iG: ig.Graph) -> torch.FloatTensor:
 
 def get_adj_matrix(iG: ig.Graph) -> torch.FloatTensor:
     """
-    Returns adjacensy matrix as torch.tensor
+    Returns adjacency matrix as torch.tensor
     """
     # TODO: add edj weights and use Laplasian
-    adj = iG.get_adjacency().data
-    adj = torch.tensor(adj, dtype=torch.float64)
+    adj = iG.get_adjacency().data  # TODO: if it's ok
+    adj = torch.tensor(adj, dtype=torch.float)
     print(f"Use adj matrix as X. Shape is {adj.shape}")
     return adj

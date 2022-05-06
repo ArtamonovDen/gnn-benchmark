@@ -1,3 +1,4 @@
+from functools import cached_property
 from pathlib import Path
 import os
 from typing import List
@@ -5,6 +6,8 @@ from sklearn import preprocessing
 import torch
 import igraph as ig
 import pandas as pd
+
+from torch_sparse import SparseTensor
 
 from torch_geometric.data import Data, InMemoryDataset, Dataset
 from dataset.igraph_tools import (
@@ -85,10 +88,16 @@ class TumorBrainInMemoryDataset(InMemoryDataset):
         torch.save((data, slices), self.processed_paths[0])
 
 
-class TumorBrainDataset(Dataset):
-    def __init__(self, root, label_path, transform=None, pre_transform=None):
+class TumorMetDataset(Dataset):
+    class Type:
+        BRAIN = "brain"
+        BREAST = "breast"
+        LUNG = "lung"
+        KIDNEY = "kidney"
+
+    def __init__(self, root, label_path, type, transform=None, pre_transform=None):
         self.label_path = label_path
-        self.are_directed = True  # if graphs in dataset directed
+        self.type = type
         # TODO: add check if processed
         self.label_encoder = preprocessing.LabelEncoder()
         self.labels = init_graph_labels(label_path, self.label_encoder)
@@ -110,10 +119,19 @@ class TumorBrainDataset(Dataset):
 
         return []
 
+    @cached_property
+    def classes2dataset(self):
+        return {
+            self.Type.BRAIN: 7,
+            self.Type.BREAST: 3,  # TODO
+            self.Type.KIDNEY: 3,  # TODO
+            self.Type.LUNG: 3,  # TODO
+        }
+
     @property
     def num_classes(self):
         # TODO: just for Brain dataset for now!
-        return 7
+        return self.classes2dataset.get(self.type)
 
     def process(self):
         skipped = []
@@ -133,6 +151,7 @@ class TumorBrainDataset(Dataset):
             # is_directed = iG.is_directed()
             edge_index, edges_weights = get_edges_with_weghts_from_igraph(iG)
             x = get_degree_matrix(iG)
+            # x = SparseTensor.eye(N)
             data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edges_weights)
             print(f"{idx}| Saving Data object {data}")
             torch.save(data, os.path.join(self.processed_dir, f"data_{idx}.pt"))
