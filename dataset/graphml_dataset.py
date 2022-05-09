@@ -10,11 +10,7 @@ import pandas as pd
 
 from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.utils import to_undirected
-from dataset.igraph_tools import (
-    get_adj_matrix,
-    get_degree_matrix,
-    get_edges_with_weghts_from_igraph,
-)
+from dataset.igraph_tools import get_adj_matrix, get_edges_with_weghts_from_igraph
 
 
 class GraphmlInMemoryDataset(InMemoryDataset):
@@ -23,11 +19,13 @@ class GraphmlInMemoryDataset(InMemoryDataset):
         KIDNEY = "kidney_metabolic"
         MREG = "mreg"
 
-    def __init__(self, type, root, label_path):
+    def __init__(self, type, root, label_path=None):
         self.label_path = label_path
         self.type = type
-        self.label_encoder = preprocessing.LabelEncoder()
-        self.labels = self.init_graph_labels()
+        if label_path:
+            # may be skipped if dataset is already preprocessed
+            self.label_encoder = preprocessing.LabelEncoder()
+            self.labels = self.init_graph_labels()
 
         super().__init__(root, transform=None, pre_transform=None)
         self.data, self.slices = torch.load(self.processed_paths[0])
@@ -44,7 +42,7 @@ class GraphmlInMemoryDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self) -> List[str]:
-        return ["graph_data.pt"]
+        return [f"{self.type}_graph_data.pt"]
 
     @cached_property
     def classes2dataset(self):
@@ -56,7 +54,6 @@ class GraphmlInMemoryDataset(InMemoryDataset):
 
     def init_graph_labels(self):
 
-        # TODO: check that ok
         lablels_mapping = pd.read_csv(self.label_path, sep=" ")
         lablels_mapping = lablels_mapping[["Samples", "labels"]]
         lablels_mapping = lablels_mapping.set_index("Samples")
@@ -91,15 +88,12 @@ class GraphmlInMemoryDataset(InMemoryDataset):
 
             iG: ig.Graph = ig.load(graph_path)
             is_directed = iG.is_directed()
-            # TODO: check that indirected is ok
-            edge_index, edges_weights = get_edges_with_weghts_from_igraph(iG)
-            # x = get_degree_matrix(iG)  # TODO: ok?
+            edge_index, edge_attr = get_edges_with_weghts_from_igraph(iG)
+            # TODO: add a way to chose other way to create node features
             x = get_adj_matrix(iG)
             if not is_directed:
-                edge_index, edges_weights = to_undirected(
-                    edge_index, edge_attr=edges_weights
-                )
-            data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edges_weights)
+                edge_index, edge_attr = to_undirected(edge_index, edge_attr=edge_attr)
+            data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edge_attr)
             graph_data_list.append(data)
             print(f"{i}| Saving Data object {data}")
 
