@@ -10,6 +10,7 @@ import pandas as pd
 
 from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.utils import to_undirected
+import torch_geometric.transforms as T
 from dataset.igraph_tools import get_adj_matrix, get_edges_with_weghts_from_igraph
 
 
@@ -26,8 +27,7 @@ class GraphmlInMemoryDataset(InMemoryDataset):
             # may be skipped if dataset is already preprocessed
             self.label_encoder = preprocessing.LabelEncoder()
             self.labels = self.init_graph_labels()
-
-        super().__init__(root, transform=None, pre_transform=None)
+        super().__init__(root, transform=T.OneHotDegree(max_degree=self.max_degree2dataset[type]), pre_transform=None)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
@@ -47,6 +47,10 @@ class GraphmlInMemoryDataset(InMemoryDataset):
     @cached_property
     def classes2dataset(self):
         return {self.Type.BRAIN: 2, self.Type.KIDNEY: 3, self.Type.MREG: 3}
+
+    @cached_property
+    def max_degree2dataset(self):
+        return {self.Type.BRAIN: 238}  # TODO
 
     @property
     def num_classes(self):
@@ -72,6 +76,7 @@ class GraphmlInMemoryDataset(InMemoryDataset):
     def get_graph_name(self, graph_path: Path):
         if self.type == self.Type.BRAIN:
             return graph_path.stem.split("_")[1]
+        # TODO
 
     def process(self):
         graph_data_list = []
@@ -89,11 +94,10 @@ class GraphmlInMemoryDataset(InMemoryDataset):
             iG: ig.Graph = ig.load(graph_path)
             is_directed = iG.is_directed()
             edge_index, edge_attr = get_edges_with_weghts_from_igraph(iG)
-            # TODO: add a way to chose other way to create node features
-            x = get_adj_matrix(iG)
+
             if not is_directed:
                 edge_index, edge_attr = to_undirected(edge_index, edge_attr=edge_attr)
-            data = Data(x=x, edge_index=edge_index, y=y, edge_attr=edge_attr)
+            data = Data(x=None, edge_index=edge_index, y=y, edge_attr=edge_attr)
             graph_data_list.append(data)
             print(f"{i}| Saving Data object {data}")
 
