@@ -57,7 +57,9 @@ def test(loader):
         total += data.y.size(0)  # TODO: but seems we do not need it?
 
     acc = correct / total
-    f1 = f1_score(data.y.cpu(), pred.cpu())  # TODO: check if it works
+    # TODO: doesn't work for kidney!
+    # f1 = f1_score(data.y.cpu(), pred.cpu())  # TODO: check if it works
+    f1=0
 
     return acc, f1
 
@@ -91,18 +93,22 @@ Add:
 
 def upgrade_model_state(cur_metric, best_metric, metric_type, model_path):
     if cur_metric > best_metric:
-        logging.info("Update best model by %s from %f:.4 to %f:.4f", "acc", metric_type, best_metric, cur_metric)
+        logging.info("Update best model by %s from %.4f to %.4f", metric_type, best_metric, cur_metric)
         torch.save(model.state_dict(), model_path)
         return cur_metric
     return best_metric
 
 
-def make_val_split(dataset, size=0.2):
+def make_val_split(dataset, size=0.5):
     """
     Split graph dataset into train/test
     """
     val_bound = int(len(dataset) * size)
-    train_dataset, test_dataset = dataset[:val_bound], dataset[:val_bound]
+    train_dataset, test_dataset = dataset[val_bound:], dataset[:val_bound]
+    # TODO: add log
+    print(val_bound)
+    print(train_dataset, test_dataset)
+    print(train_dataset[0], test_dataset[0])
     return train_dataset, test_dataset
 
 
@@ -131,35 +137,38 @@ if __name__ == "__main__":
     model = ModelController.get_model(
         args.model,
         num_node_features=dataset.num_node_features,
-        hidden_channels=args.hidden,
+        hidden_channels=args.hidden_layers,
         num_classes=dataset.num_classes,
-    )(args.model).to(device)
+    ).to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)  # TODO configurable lr
+    # TODO: print model
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)  # TODO configurable lr
     scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
     criterion = torch.nn.CrossEntropyLoss()
     epoch_num = args.epoch
 
     best_val_acc, best_val_f1 = 0, 0
     model_path = os.path.join(args.save, f"{datetime.now().isoformat()}", f"model_{args.model}")
+    os.makedirs(model_path, exist_ok=True)
     # TODO: add file with cofiguration
     best_acc_model_path = os.path.join(model_path, "best_acc.pth")
     best_f1_model_path = os.path.join(model_path, "best_f1.pth")
 
 
     for epoch in range(epoch_num):
-        logging.info(f"Epoch: {epoch:03d}. Start training")
+        logging.info("Epoch: %03d. Start training", epoch)
         loss = train()
 
-        logging.info(f"Epoch: {epoch:03d}. Start validation")
-        train_acc = test(train_loader)
+        logging.info("Epoch: %03d. Start validation", epoch)
+        train_acc, train_f1 = test(train_loader)
         scheduler.step()
         with torch.no_grad():
             test_acc, test_f1 = test(test_loader)
 
         logging.info(
-            f"Epoch: {epoch:03d},  Loss: {loss:.4f},",
-            f"Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}, Test F1: {test_f1:.4f}",
+            "Epoch: %03d,  Loss: %.4f, Train Acc: %.4f, Train F1: %.4f, Test Acc: %.4f, Test F1: %.4f",
+            epoch, loss, train_acc, train_f1, test_acc, test_f1
         )
 
         best_val_acc = upgrade_model_state(test_acc, best_val_acc, "accuracy", best_acc_model_path)
