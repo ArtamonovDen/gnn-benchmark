@@ -17,7 +17,7 @@ class GraphmlInMemoryDataset(InMemoryDataset):
     class Type:
         BRAIN = "brain_fmri"
         KIDNEY = "kidney_metabolic"
-        MREG = "mreg"
+        ALL = [BRAIN, KIDNEY]
 
     def __init__(self, type, root, label_path=None):
         self.label_path = label_path

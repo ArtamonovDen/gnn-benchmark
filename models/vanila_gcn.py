@@ -1,3 +1,4 @@
+from typing import List
 import torch
 from torch.nn import Linear
 import torch.nn.functional as F
@@ -9,14 +10,13 @@ def load_model():
 
 
 class VanilaGCN(torch.nn.Module):
-    def __init__(self, num_node_features, hidden_channels, num_classes):
+    def __init__(self, num_node_features, hidden_channels: List[int], num_classes):
         super(VanilaGCN, self).__init__()
-        torch.manual_seed(42)
-        self.conv1 = GCNConv(num_node_features, hidden_channels)
-        # self.conv2 = GCNConv(hidden_channels, hidden_channels)
-        # self.conv3 = GCNConv(hidden_channels, hidden_channels)
-        self.lin1 = Linear(hidden_channels, 64)
-        self.lin2 = Linear(64, num_classes)
+        conv_h, lin_h = hidden_channels[0], hidden_channels[1]
+        lin_h = 64
+        self.conv1 = GCNConv(num_node_features, conv_h)
+        self.lin1 = Linear(conv_h, lin_h)
+        self.lin2 = Linear(lin_h, num_classes)
 
     def forward(self, x, edge_index, edge_weight, batch):
         # 1. Obtain node embeddings
