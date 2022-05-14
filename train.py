@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import torch
+import wandb
 from tqdm import tqdm
 from datetime import datetime
 from dataset.dataset_controller import DatasetController
@@ -34,14 +35,17 @@ def train():
         loss.backward()
         loss_all += loss.item()
         optimizer.step()
-    return loss_all / len(train_loader)  # TODO: loss over batch?
+    return loss_all / len(train_loader)
 
 
-def test(loader):
+def test(loader, binary=True):
     model.eval()
+
+    f1_average = "binary" if binary else "weighted"
 
     correct = 0
     total = 0
+    total_y, total_pred = None, None
     for data in tqdm(loader):
         data = data.to(device)
         outputs = model(
@@ -53,24 +57,20 @@ def test(loader):
 
         _, pred = torch.max(outputs, 1)
         correct += int((pred == data.y).sum())
-        total += data.y.size(0)  # TODO: but seems we do not need it?
+        total += data.y.size(0)
+
+        # store all labels to get metrics
+        if total_y is None and total_pred is None:
+            total_y = data.y.cpu()
+            total_pred = pred.cpu()
+        else:
+            total_y = torch.cat((total_y, data.y.cpu()), dim=0)
+            total_pred = torch.cat((total_pred, pred.cpu()), dim=0)
 
     acc = correct / total
-    # TODO: doesn't work for kidney!
-    # f1 = f1_score(data.y.cpu(), pred.cpu())  # TODO: check if it works
-    f1=0
+    f1 = f1_score(total_y, total_pred, average=f1_average) # TODO: choose average. different for binaries?
 
     return acc, f1
-
-
-def get_dataset(root, type):
-    # root = "/home/friday/projects/hse_gnn/datasets/cbs-datasets/BrainfMRI"
-    # TODO: do smt with type
-
-    # TODO: add a way to use TUDatasets
-
-    ds = GraphmlInMemoryDataset(root=root, type=type)
-    return ds
 
 
 def choose_device(args):
@@ -91,38 +91,38 @@ def make_val_split(dataset, size=0.5):
     """
     val_bound = int(len(dataset) * size)
     train_dataset, test_dataset = dataset[val_bound:], dataset[:val_bound]
-    # TODO: add log
-    print(val_bound)
-    print(train_dataset, test_dataset)
-    print(train_dataset[0], test_dataset[0])
+    logging.info("Split dataset by ratio %f. Train dataset size %d, test dataset size %d", size, len(train_dataset), len(test_dataset))
     return train_dataset, test_dataset
 
 
 if __name__ == "__main__":
+
     logging.basicConfig(
         stream=sys.stdout,  format='[%(asctime)s] %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %I:%M:%S'
     )
 
     args = parse()
 
-    logging.info("Running train script with configuration: \n %s", args)
-
-
-    torch.manual_seed(42)
-    batch_size = args.batch_size
-
-    dataset = DatasetController.get_dataset(args.type, args.root)
-    dataset = dataset.shuffle()
-
-    train_dataset, test_dataset = make_val_split(dataset)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size)
-
-    device = choose_device(args)
-
     model_path = os.path.join(args.save, f"dataset_{args.type}", f"{datetime.now().isoformat()}", f"model_{args.model}")
     os.makedirs(model_path, exist_ok=True)
+
+    config = vars(args)
+    wandb.config.update(args)
+    wandb.config.update({"model_path": model_path})
+
+    wandb.init(project=args.wandb_project, config=config, entity="dsartamonov")
+
+    logging.info("Running train script with configuration: \n %s", args)
+
+    torch.manual_seed(42)
+    dataset = DatasetController.get_dataset(args.type, args.root)
+    dataset = dataset.shuffle()
+    train_dataset, test_dataset = make_val_split(dataset)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
+    is_binary = dataset.num_classes == 2
+
+    device = choose_device(args)
 
     model = ModelController.get_model(
         model_name=args.model,
@@ -130,6 +130,8 @@ if __name__ == "__main__":
         hidden_channels=args.hidden_layers,
         num_classes=dataset.num_classes,
     ).to(device)
+
+    wandb.watch(model)
 
     logging.info("Running training procedure of model %s and dataset %s\n Model config: %s\n Argumetns %s", args.model, args.type, model, vars(args))
 
@@ -139,38 +141,36 @@ if __name__ == "__main__":
         json_config = json.dumps(config, indent=4, sort_keys=True)
         f.write(json_config)
 
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)  # TODO configurable lr
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)  # TODO configurable lr
     scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
     criterion = torch.nn.CrossEntropyLoss()
-    epoch_num = args.epoch
 
     best_val_acc, best_val_f1 = 0, 0
-
-
-    # TODO: add file with cofiguration to the folder
     best_acc_model_path = os.path.join(model_path, "best_acc.pth")
     best_f1_model_path = os.path.join(model_path, "best_f1.pth")
 
-
-    for epoch in range(epoch_num):
+    for epoch in range(args.epoch):
         logging.info("Epoch: %03d. Start training", epoch)
+        wandb.log({'epoch': epoch})
         loss = train()
 
         logging.info("Epoch: %03d. Start validation", epoch)
-        train_acc, train_f1 = test(train_loader)
-        scheduler.step()
         with torch.no_grad():
-            test_acc, test_f1 = test(test_loader)
+            train_acc, train_f1 = test(train_loader, binary=is_binary)
+            test_acc, test_f1 = test(test_loader, binary=is_binary)
+
+        best_val_acc = upgrade_model_state(test_acc, best_val_acc, "accuracy", best_acc_model_path)
+        best_val_f1 = upgrade_model_state(test_f1, best_val_f1, "f1", best_f1_model_path)
+
+        scheduler.step()
 
         logging.info(
             "Epoch: %03d,  Loss: %.4f, Train Acc: %.4f, Train F1: %.4f, Test Acc: %.4f, Test F1: %.4f",
             epoch, loss, train_acc, train_f1, test_acc, test_f1
         )
+        wandb.log({"train_acc": train_acc, "test_acc": test_acc, "train_f1": train_f1, "test_f1": test_f1, "loss": loss})
 
-        best_val_acc = upgrade_model_state(test_acc, best_val_acc, "accuracy", best_acc_model_path)
-        best_val_f1 = upgrade_model_state(test_f1, best_val_f1, "f1", best_f1_model_path)
-
+    wandb.finish()
     with open(os.path.join(model_path, "val_metric.json"), "w") as f:
         json_config = json.dumps({
             "best_val_acc": best_val_acc,
