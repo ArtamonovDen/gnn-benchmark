@@ -1,9 +1,9 @@
-from models.vanila_gcn import VanilaGCN
+from models.gcn import GCN
 
 
 class ModelController:
     __models = {
-        "vanila_gcn": VanilaGCN,
+        "gcn": GCN,
     }
 
     @classmethod
