@@ -8,12 +8,9 @@ from tqdm import tqdm
 from datetime import datetime
 from dataset.dataset_controller import DatasetController
 from train_args import parse
-from dataset.graphml_dataset import GraphmlInMemoryDataset
 from torch.optim.lr_scheduler import StepLR
 
-
-from models.model import ModelController
-
+from models.model_controller import ModelController
 
 from torch_geometric.loader import DataLoader
 from sklearn.metrics import f1_score
@@ -74,7 +71,7 @@ def test(loader, binary=True):
 
 
 def choose_device(args):
-    return torch.device(args.device) if args.device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return torch.device("cpu") if args.cpu else torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def upgrade_model_state(cur_metric, best_metric, metric_type, model_path):
@@ -106,11 +103,8 @@ if __name__ == "__main__":
     model_path = os.path.join(args.save, f"dataset_{args.type}", f"{datetime.now().isoformat()}", f"model_{args.model}")
     os.makedirs(model_path, exist_ok=True)
 
-    config = vars(args)
-    wandb.config.update(args)
-    wandb.config.update({"model_path": model_path})
+    # config = vars(args)
 
-    wandb.init(project=args.wandb_project, config=config, entity="dsartamonov")
 
     logging.info("Running train script with configuration: \n %s", args)
 
@@ -131,8 +125,6 @@ if __name__ == "__main__":
         num_classes=dataset.num_classes,
     ).to(device)
 
-    wandb.watch(model)
-
     logging.info("Running training procedure of model %s and dataset %s\n Model config: %s\n Argumetns %s", args.model, args.type, model, vars(args))
 
     with open(os.path.join(model_path, "config.json"), "w") as f:
@@ -149,28 +141,32 @@ if __name__ == "__main__":
     best_acc_model_path = os.path.join(model_path, "best_acc.pth")
     best_f1_model_path = os.path.join(model_path, "best_f1.pth")
 
-    for epoch in range(args.epoch):
-        logging.info("Epoch: %03d. Start training", epoch)
-        wandb.log({'epoch': epoch})
-        loss = train()
+    with wandb.init(project=args.wandb_project):
+        wandb.watch(model)
+        wandb.config.update(args)
+        wandb.config.update({"model_path": model_path})
 
-        logging.info("Epoch: %03d. Start validation", epoch)
-        with torch.no_grad():
-            train_acc, train_f1 = test(train_loader, binary=is_binary)
-            test_acc, test_f1 = test(test_loader, binary=is_binary)
+        for epoch in range(args.epoch):
+            logging.info("Epoch: %03d. Start training", epoch)
+            wandb.log({'epoch': epoch})
+            loss = train()
 
-        best_val_acc = upgrade_model_state(test_acc, best_val_acc, "accuracy", best_acc_model_path)
-        best_val_f1 = upgrade_model_state(test_f1, best_val_f1, "f1", best_f1_model_path)
+            logging.info("Epoch: %03d. Start validation", epoch)
+            with torch.no_grad():
+                train_acc, train_f1 = test(train_loader, binary=is_binary)
+                test_acc, test_f1 = test(test_loader, binary=is_binary)
 
-        scheduler.step()
+            best_val_acc = upgrade_model_state(test_acc, best_val_acc, "accuracy", best_acc_model_path)
+            best_val_f1 = upgrade_model_state(test_f1, best_val_f1, "f1", best_f1_model_path)
 
-        logging.info(
-            "Epoch: %03d,  Loss: %.4f, Train Acc: %.4f, Train F1: %.4f, Test Acc: %.4f, Test F1: %.4f",
-            epoch, loss, train_acc, train_f1, test_acc, test_f1
-        )
-        wandb.log({"train_acc": train_acc, "test_acc": test_acc, "train_f1": train_f1, "test_f1": test_f1, "loss": loss})
+            scheduler.step()
 
-    wandb.finish()
+            logging.info(
+                "Epoch: %03d,  Loss: %.4f, Train Acc: %.4f, Train F1: %.4f, Test Acc: %.4f, Test F1: %.4f",
+                epoch, loss, train_acc, train_f1, test_acc, test_f1
+            )
+            wandb.log({"train_acc": train_acc, "test_acc": test_acc, "train_f1": train_f1, "test_f1": test_f1, "loss": loss})
+
     with open(os.path.join(model_path, "val_metric.json"), "w") as f:
         json_config = json.dumps({
             "best_val_acc": best_val_acc,
