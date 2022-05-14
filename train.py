@@ -22,10 +22,13 @@ def train():
     for data in tqdm(train_loader):
         optimizer.zero_grad()
         data = data.to(device)
+        # TODO: distingush weight and edge attr
+        edge_weight = None
         out = model(
             x=data.x,
             edge_index=data.edge_index,
-            edge_weight=data.edge_attr,
+            edge_attr=data.edge_attr,
+            edge_weight=edge_weight,
             batch=data.batch,
         )
         loss = criterion(out, data.y)
@@ -43,12 +46,14 @@ def test(loader, binary=True):
     correct = 0
     total = 0
     total_y, total_pred = None, None
+    edge_weight = None # TODO
     for data in tqdm(loader):
         data = data.to(device)
         outputs = model(
             x=data.x,
             edge_index=data.edge_index,
-            edge_weight=data.edge_attr,
+            edge_attr=data.edge_attr,
+            edge_weight=edge_weight,
             batch=data.batch,
         )
 

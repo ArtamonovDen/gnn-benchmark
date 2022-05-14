@@ -24,7 +24,7 @@ class GCN(torch.nn.Module):
             return global_add_pool(x, batch)
         raise ValueError("Wrong pooling strategy")
 
-    def forward(self, x, edge_index, edge_weight, batch):
+    def forward(self, x, edge_index, edge_weight, batch, **kwargs):
         # 1. Obtain node embeddings
         if edge_weight is not None:
             edge_weight = torch.flatten(edge_weight)
