@@ -1,4 +1,3 @@
-from cmath import log
 import json
 import logging
 import os
@@ -74,21 +73,8 @@ def get_dataset(root, type):
     return ds
 
 
-
-
-
-"""
-Customize:
-    * dataset and type
-    * model
-    * device?
-    * hiddem layer size?
-
-Add:
-    * wnb?
-    * validation
-    * best model chosing
-"""
+def choose_device(args):
+    return torch.device(args.device) if args.device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def upgrade_model_state(cur_metric, best_metric, metric_type, model_path):
@@ -121,6 +107,7 @@ if __name__ == "__main__":
 
     logging.info("Running train script with configuration: \n %s", args)
 
+
     torch.manual_seed(42)
     batch_size = args.batch_size
 
@@ -132,16 +119,26 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=batch_size)
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-    device = "cpu"  # torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = choose_device(args)
+
+    model_path = os.path.join(args.save, f"dataset_{args.type}", f"{datetime.now().isoformat()}", f"model_{args.model}")
+    os.makedirs(model_path, exist_ok=True)
 
     model = ModelController.get_model(
-        args.model,
+        model_name=args.model,
         num_node_features=dataset.num_node_features,
         hidden_channels=args.hidden_layers,
         num_classes=dataset.num_classes,
     ).to(device)
 
-    # TODO: print model
+    logging.info("Running training procedure of model %s and dataset %s\n Model config: %s\n Argumetns %s", args.model, args.type, model, vars(args))
+
+    with open(os.path.join(model_path, "config.json"), "w") as f:
+        config = vars(args)
+        config["model_config"] = str(model)
+        json_config = json.dumps(config, indent=4, sort_keys=True)
+        f.write(json_config)
+
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)  # TODO configurable lr
     scheduler = StepLR(optimizer, step_size=50, gamma=0.1)
@@ -149,9 +146,9 @@ if __name__ == "__main__":
     epoch_num = args.epoch
 
     best_val_acc, best_val_f1 = 0, 0
-    model_path = os.path.join(args.save, f"{datetime.now().isoformat()}", f"model_{args.model}")
-    os.makedirs(model_path, exist_ok=True)
-    # TODO: add file with cofiguration
+
+
+    # TODO: add file with cofiguration to the folder
     best_acc_model_path = os.path.join(model_path, "best_acc.pth")
     best_f1_model_path = os.path.join(model_path, "best_f1.pth")
 
@@ -174,3 +171,12 @@ if __name__ == "__main__":
         best_val_acc = upgrade_model_state(test_acc, best_val_acc, "accuracy", best_acc_model_path)
         best_val_f1 = upgrade_model_state(test_f1, best_val_f1, "f1", best_f1_model_path)
 
+    with open(os.path.join(model_path, "val_metric.json"), "w") as f:
+        json_config = json.dumps({
+            "best_val_acc": best_val_acc,
+            "best_val_f1": best_val_f1,
+            "last_train_acc": train_acc,
+            "last_train_f1": train_f1,
+            "loss": loss,
+        }, indent=4, sort_keys=True)
+        f.write(json_config)
