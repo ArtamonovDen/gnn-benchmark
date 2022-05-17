@@ -1,4 +1,3 @@
-from functools import cached_property
 from pathlib import Path
 import os
 from typing import List
@@ -47,11 +46,11 @@ class GraphmlInMemoryDataset(InMemoryDataset):
     def processed_file_names(self) -> List[str]:
         return [f"{self.type}_graph_data.pt"]
 
-    @cached_property
+    @property
     def classes2dataset(self):
         return {self.Type.BRAIN: 2, self.Type.KIDNEY: 3}
 
-    @cached_property
+    @property
     def max_degree2dataset(self):
         return {self.Type.BRAIN: 238, self.Type.KIDNEY: 105}  # TODO
 
