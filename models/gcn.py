@@ -1,17 +1,20 @@
+import logging
 from typing import List
 import torch
-from torch.nn import Linear
+from torch.nn import Linear, ModuleList
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, global_add_pool, global_max_pool, global_mean_pool
 
 
 class GCN(torch.nn.Module):
-    def __init__(self, num_node_features, hidden_channels: List[int], num_classes, num_conv=3, pooling="max"):
+    def __init__(self, num_node_features, hidden_channels: List[int], num_classes, num_conv=3, pooling="mean"):
         super(GCN, self).__init__()
         conv_h, lin_h = hidden_channels[0], hidden_channels[1]
 
         self.pooling = pooling
-        self.convs = [GCNConv(num_node_features, conv_h)] + [GCNConv(conv_h, conv_h) for _ in range(num_conv-1)]
+        self.convs = ModuleList(
+            [GCNConv(num_node_features, conv_h)] + [GCNConv(conv_h, conv_h) for _ in range(num_conv-1)]
+            )
         self.lin1 = Linear(conv_h, lin_h)
         self.lin2 = Linear(lin_h, num_classes)
 

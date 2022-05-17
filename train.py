@@ -16,14 +16,13 @@ from torch_geometric.loader import DataLoader
 from sklearn.metrics import f1_score
 
 
-def train():
+def train(weighted):
     model.train()
     loss_all = 0.0
     for data in tqdm(train_loader):
         optimizer.zero_grad()
         data = data.to(device)
-        # TODO: distingush weight and edge attr
-        edge_weight = None
+        edge_weight = data.edge_attr if weighted else None
         out = model(
             x=data.x,
             edge_index=data.edge_index,
@@ -38,16 +37,17 @@ def train():
     return loss_all / len(train_loader)
 
 
-def test(loader, binary=True):
+def test(loader, weighted, binary=True):
     model.eval()
 
-    f1_average = "binary" if binary else "weighted"
+    f1_average = "binary" if binary else "macro" # TODO
 
     correct = 0
     total = 0
     total_y, total_pred = None, None
-    edge_weight = None # TODO
     for data in tqdm(loader):
+        
+        edge_weight = data.edge_attr if weighted else None  # TODO
         data = data.to(device)
         outputs = model(
             x=data.x,
@@ -70,7 +70,7 @@ def test(loader, binary=True):
             total_pred = torch.cat((total_pred, pred.cpu()), dim=0)
 
     acc = correct / total
-    f1 = f1_score(total_y, total_pred, average=f1_average) # TODO: choose average. different for binaries?
+    f1 = f1_score(total_y, total_pred, average=f1_average)  # TODO: choose average. different for binaries?
 
     return acc, f1
 
@@ -87,7 +87,7 @@ def upgrade_model_state(cur_metric, best_metric, metric_type, model_path):
     return best_metric
 
 
-def make_val_split(dataset, size=0.5):
+def make_val_split(dataset, size=0.3):
     """
     Split graph dataset into train/test
     """
@@ -105,18 +105,15 @@ if __name__ == "__main__":
 
     args = parse()
 
-    model_path = os.path.join(args.save, f"dataset_{args.type}", f"{datetime.now().isoformat()}", f"model_{args.model}")
+    model_path = os.path.join(args.save, f"dataset_{args.type}",f"model_{args.model}", f"{datetime.now().isoformat()}")
     os.makedirs(model_path, exist_ok=True)
-
-    # config = vars(args)
-
 
     logging.info("Running train script with configuration: \n %s", args)
 
     torch.manual_seed(42)
     dataset = DatasetController.get_dataset(args.type, args.root)
     dataset = dataset.shuffle()
-    train_dataset, test_dataset = make_val_split(dataset)
+    train_dataset, test_dataset = make_val_split(dataset, args.val_ratio)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
     is_binary = dataset.num_classes == 2
@@ -128,9 +125,16 @@ if __name__ == "__main__":
         num_node_features=dataset.num_node_features,
         hidden_channels=args.hidden_layers,
         num_classes=dataset.num_classes,
+        num_conv=args.conv_num,
+        pooling=args.conv_pooling,
     ).to(device)
 
-    logging.info("Running training procedure of model %s and dataset %s\n Model config: %s\n Argumetns %s", args.model, args.type, model, vars(args))
+    logging.info(
+        "Running training procedure of model %s and dataset %s\n Dataset info %s\n Model config: %s\n Argumetns %s",
+        args.model, args.type, dataset, model, vars(args)
+    )
+
+    weighted = args.weighted
 
     with open(os.path.join(model_path, "config.json"), "w") as f:
         config = vars(args)
@@ -146,7 +150,9 @@ if __name__ == "__main__":
     best_acc_model_path = os.path.join(model_path, "best_acc.pth")
     best_f1_model_path = os.path.join(model_path, "best_f1.pth")
 
-    with wandb.init(project=args.wandb_project):
+    wandb_project = args.wandb_project or f"{args.type}_{args.model}"
+
+    with wandb.init(project=wandb_project):
         wandb.watch(model)
         wandb.config.update(args)
         wandb.config.update({"model_path": model_path})
@@ -154,12 +160,12 @@ if __name__ == "__main__":
         for epoch in range(args.epoch):
             logging.info("Epoch: %03d. Start training", epoch)
             wandb.log({'epoch': epoch})
-            loss = train()
+            loss = train(weighted)
 
             logging.info("Epoch: %03d. Start validation", epoch)
             with torch.no_grad():
-                train_acc, train_f1 = test(train_loader, binary=is_binary)
-                test_acc, test_f1 = test(test_loader, binary=is_binary)
+                train_acc, train_f1 = test(train_loader, weighted, binary=is_binary)
+                test_acc, test_f1 = test(test_loader, weighted, binary=is_binary)
 
             best_val_acc = upgrade_model_state(test_acc, best_val_acc, "accuracy", best_acc_model_path)
             best_val_f1 = upgrade_model_state(test_f1, best_val_f1, "f1", best_f1_model_path)
