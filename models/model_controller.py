@@ -1,9 +1,11 @@
 from models.gcn import GCN
+from models.gcn2 import GCNII
 
 
 class ModelController:
     __models = {
         "gcn": GCN,
+        "gcn2": GCNII,
     }
 
     @classmethod
