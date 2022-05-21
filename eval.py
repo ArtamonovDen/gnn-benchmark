@@ -23,9 +23,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     acc_list, f1_list = [], []
-    
+
+    root = args.root
+    if args.root is None:
+        dataset = os.getenv("TYPE", "dataset")
+        model = os.getenv("MODEL", "model")
+        root = f"./model_snapshots/dataset_{dataset}/model_{model}"
+
+    logging.info("Root path is %s", root)
+
     #  recursive globbing over sub directories of root
-    for metric_file in sorted(Path(args.root).glob(f"**/{args.file}.py")):
+    for metric_file in sorted(Path(root).glob(f"**/{args.file}.py")):
         with open(metric_file, "r") as f:
             logging.info("Process %s", str(metric_file))
             metrics = json.load(f)
