@@ -206,4 +206,5 @@ if __name__ == "__main__":
                     "test_f1": test_f1,
                 }, indent=4, sort_keys=True)
                 f.write(json_config)
+            logging.info("Test acc is %.4f, Test f1 %.4f", test_acc, test_f1)
             wandb.log({"test_acc": test_acc, "test_f1": test_f1})
