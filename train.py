@@ -20,8 +20,8 @@ def train(weighted):
     model.train()
     loss_all = 0.0
     for data in tqdm(train_loader):
-        optimizer.zero_grad()
         data = data.to(device)
+        optimizer.zero_grad()
         edge_weight = data.edge_attr if weighted else None
         out = model(
             x=data.x,
@@ -45,8 +45,8 @@ def test(loader, model, weighted, binary=True):
     correct, total = 0, 0
     total_y, total_pred = None, None
     for data in tqdm(loader):
-        edge_weight = data.edge_attr if weighted else None
         data = data.to(device)
+        edge_weight = data.edge_attr if weighted else None
         outputs = model(
             x=data.x,
             edge_index=data.edge_index,
