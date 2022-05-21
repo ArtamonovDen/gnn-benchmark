@@ -37,17 +37,15 @@ def train(weighted):
     return loss_all / len(train_loader)
 
 
-def test(loader, weighted, binary=True):
+def test(loader, model, weighted, binary=True):
     model.eval()
 
-    f1_average = "binary" if binary else "macro" # TODO
+    f1_average = "binary" if binary else "macro"
 
-    correct = 0
-    total = 0
+    correct, total = 0, 0
     total_y, total_pred = None, None
     for data in tqdm(loader):
-        
-        edge_weight = data.edge_attr if weighted else None  # TODO
+        edge_weight = data.edge_attr if weighted else None
         data = data.to(device)
         outputs = model(
             x=data.x,
@@ -70,7 +68,7 @@ def test(loader, weighted, binary=True):
             total_pred = torch.cat((total_pred, pred.cpu()), dim=0)
 
     acc = correct / total
-    f1 = f1_score(total_y, total_pred, average=f1_average)  # TODO: choose average. different for binaries?
+    f1 = f1_score(total_y, total_pred, average=f1_average)
 
     return acc, f1
 
@@ -105,17 +103,25 @@ if __name__ == "__main__":
 
     args = parse()
 
+    is_test = args.test_run
+
     model_path = os.path.join(args.save, f"dataset_{args.type}",f"model_{args.model}", f"{datetime.now().isoformat()}")
     os.makedirs(model_path, exist_ok=True)
 
     logging.info("Running train script with configuration: \n %s", args)
 
-    torch.manual_seed(42)
+    if not is_test:
+        torch.manual_seed(42)
+
     dataset = DatasetController.get_dataset(args.type, args.root)
     dataset = dataset.shuffle()
-    train_dataset, test_dataset = make_val_split(dataset, args.val_ratio)
+
+    if is_test:
+        dataset, test_dataset = make_val_split(dataset, args.test_ratio)
+
+    train_dataset, val_dataset = make_val_split(dataset, args.val_ratio)
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size)
     is_binary = dataset.num_classes == 2
 
     device = choose_device(args)
@@ -164,19 +170,18 @@ if __name__ == "__main__":
 
             logging.info("Epoch: %03d. Start validation", epoch)
             with torch.no_grad():
-                train_acc, train_f1 = test(train_loader, weighted, binary=is_binary)
-                test_acc, test_f1 = test(test_loader, weighted, binary=is_binary)
+                train_acc, train_f1 = test(train_loader, model, weighted, binary=is_binary)
+                val_acc, val_f1 = test(val_loader, model, weighted, binary=is_binary)
 
-            best_val_acc = upgrade_model_state(test_acc, best_val_acc, "accuracy", best_acc_model_path)
-            best_val_f1 = upgrade_model_state(test_f1, best_val_f1, "f1", best_f1_model_path)
+            best_val_acc = upgrade_model_state(val_acc, best_val_acc, "accuracy", best_acc_model_path)
+            best_val_f1 = upgrade_model_state(val_f1, best_val_f1, "f1", best_f1_model_path)
 
             scheduler.step()
 
             logging.info(
-                "Epoch: %03d,  Loss: %.4f, Train Acc: %.4f, Train F1: %.4f, Test Acc: %.4f, Test F1: %.4f",
-                epoch, loss, train_acc, train_f1, test_acc, test_f1
+                epoch, loss, train_acc, train_f1, val_acc, val_f1
             )
-            wandb.log({"train_acc": train_acc, "test_acc": test_acc, "train_f1": train_f1, "test_f1": test_f1, "loss": loss})
+            wandb.log({"train_acc": train_acc, "val_acc": val_acc, "train_f1": train_f1, "val_f1": val_f1, "loss": loss})
 
     with open(os.path.join(model_path, "val_metric.json"), "w") as f:
         json_config = json.dumps({
@@ -187,3 +192,15 @@ if __name__ == "__main__":
             "loss": loss,
         }, indent=4, sort_keys=True)
         f.write(json_config)
+
+    if is_test:
+        # get best by accuracy
+        test_model = torch.load(best_acc_model_path)
+        test_acc, test_f1 = test(val_loader, test_model, weighted, binary=is_binary)
+        with open(os.path.join(model_path, "test_metric.json"), "w") as f:
+            json_config = json.dumps({
+                "test_acc": test_acc,
+                "test_f1": test_f1,
+            }, indent=4, sort_keys=True)
+            f.write(json_config)
+        wandb.log({"test_acc": test_acc, "test_f1": test_f1})

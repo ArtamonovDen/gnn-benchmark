@@ -13,10 +13,12 @@ def parse():
     parser.add_argument("-l", "--learning_rate", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--cpu", action='store_true', help="Run train on CPU")
     parser.add_argument("--weighted", action='store_true', help="Graph contains edges weights")
+    parser.add_argument("--test_run", action='store_true', help="Runs script in test mode (using separate test and val")
     parser.add_argument("-y", "--hidden_layers", type=int, help="List of hidden layers dimensions", nargs="+")
     parser.add_argument("-s", "--save", type=str, default="./model_snapshots/", help="Path to save model to")
     parser.add_argument("-p", "--wandb_project", type=str, help="Name of the WandB project")
-    parser.add_argument("-v", "--val_ratio", type=float, default=0.3, help="Train/Validation split ratio")
+    parser.add_argument("-v", "--val_ratio", type=float, default=0.2, help="Train/Validation split ratio")
+    parser.add_argument("--test_ratio", type=float, default=0.2, help="Train/Test split ratio")
     parser.add_argument("--conv_num", type=int, default=3, help="Number of convolution layers in GCN")
     parser.add_argument("--conv_pooling", type=str, default="mean", help="Pooling strategy to get whole graph embedding", choices=["max","mean","add"])
 
