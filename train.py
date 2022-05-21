@@ -186,24 +186,24 @@ if __name__ == "__main__":
 
             wandb.log({"train_acc": train_acc, "val_acc": val_acc, "train_f1": train_f1, "val_f1": val_f1, "loss": loss})
 
-    with open(os.path.join(model_path, "val_metric.json"), "w") as f:
-        json_config = json.dumps({
-            "best_val_acc": best_val_acc,
-            "best_val_f1": best_val_f1,
-            "last_train_acc": train_acc,
-            "last_train_f1": train_f1,
-            "loss": loss,
-        }, indent=4, sort_keys=True)
-        f.write(json_config)
-
-    if is_test:
-        # get best by accuracy
-        test_model = torch.load(best_acc_model_path)
-        test_acc, test_f1 = test(val_loader, test_model, weighted, binary=is_binary)
-        with open(os.path.join(model_path, "test_metric.json"), "w") as f:
+        with open(os.path.join(model_path, "val_metric.json"), "w") as f:
             json_config = json.dumps({
-                "test_acc": test_acc,
-                "test_f1": test_f1,
+                "best_val_acc": best_val_acc,
+                "best_val_f1": best_val_f1,
+                "last_train_acc": train_acc,
+                "last_train_f1": train_f1,
+                "loss": loss,
             }, indent=4, sort_keys=True)
             f.write(json_config)
-        wandb.log({"test_acc": test_acc, "test_f1": test_f1})
+
+        if is_test:
+            # get best by accuracy
+            test_model = torch.load(best_acc_model_path)
+            test_acc, test_f1 = test(val_loader, test_model, weighted, binary=is_binary)
+            with open(os.path.join(model_path, "test_metric.json"), "w") as f:
+                json_config = json.dumps({
+                    "test_acc": test_acc,
+                    "test_f1": test_f1,
+                }, indent=4, sort_keys=True)
+                f.write(json_config)
+            wandb.log({"test_acc": test_acc, "test_f1": test_f1})
