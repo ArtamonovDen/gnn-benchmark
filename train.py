@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     is_test = args.test_run
 
-    model_path = os.path.join(args.save, f"dataset_{args.type}",f"model_{args.model}", f"{datetime.now().isoformat()}")
+    model_path = os.path.join(args.save, f"dataset_{args.type}", f"model_{args.model}", f"{datetime.now().isoformat()}")
     os.makedirs(model_path, exist_ok=True)
 
     logging.info("Running train script with configuration: \n %s", args)
@@ -156,7 +156,8 @@ if __name__ == "__main__":
     best_acc_model_path = os.path.join(model_path, "best_acc.pth")
     best_f1_model_path = os.path.join(model_path, "best_f1.pth")
 
-    wandb_project = args.wandb_project or f"{args.type}_{args.model}"
+    train_or_test = "test" if is_test else "train"
+    wandb_project = args.wandb_project or f"{args.type}_{args.model}_{train_or_test}"
 
     with wandb.init(project=wandb_project):
         wandb.watch(model)
@@ -179,8 +180,10 @@ if __name__ == "__main__":
             scheduler.step()
 
             logging.info(
+                "Epoch: %03d,  Loss: %.4f, Train Acc: %.4f, Train F1: %.4f, Test Acc: %.4f, Test F1: %.4f",
                 epoch, loss, train_acc, train_f1, val_acc, val_f1
             )
+
             wandb.log({"train_acc": train_acc, "val_acc": val_acc, "train_f1": train_f1, "val_f1": val_f1, "loss": loss})
 
     with open(os.path.join(model_path, "val_metric.json"), "w") as f:
