@@ -54,7 +54,7 @@ if __name__ == "__main__":
     Path(save).mkdir(parents=True, exist_ok=True)
     with open(os.path.join(save, "test_metric_results.json"), "w") as f:
         json_results = json.dumps({
-            "root": args.root,
+            "root": root,
             "mean_acc": mean_acc,
             "std_acc": std_acc,
             "mean_f1": mean_f1,
