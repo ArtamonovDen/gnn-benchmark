@@ -40,8 +40,8 @@ if __name__ == "__main__":
         with open(metric_file, "r") as f:
             logging.info("Process %s", str(metric_file))
             metrics = json.load(f)
-            acc_list.append(float(metrics["acc"]))
-            f1_list.append(float(metrics["f1"]))
+            acc_list.append(float(metrics["test_acc"]))
+            f1_list.append(float(metrics["test_f1"]))
 
     accs, f1s = np.asarray(acc_list), np.asarray(f1_list)
 
