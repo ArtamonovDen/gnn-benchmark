@@ -45,8 +45,8 @@ class GCNII(torch.nn.Module):
             x = F.dropout(x, self.dropout, training=self.training)
             x = conv(x, x_0, edge_index, edge_weight).relu()
 
-        x = self.pool(x, batch) # TODO: ok?
-        x = F.dropout(x, self.dropout, training=self.training)
+        x = self.pool(x, batch)
+        # x = F.dropout(x, self.dropout, training=self.training)
         x = self.lin2(x)
 
         return x
