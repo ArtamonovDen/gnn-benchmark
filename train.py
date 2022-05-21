@@ -80,7 +80,7 @@ def choose_device(args):
 def upgrade_model_state(cur_metric, best_metric, metric_type, model_path):
     if cur_metric > best_metric:
         logging.info("Update best model by %s from %.4f to %.4f", metric_type, best_metric, cur_metric)
-        torch.save(model.state_dict(), model_path)
+        torch.save(model, model_path)
         return cur_metric
     return best_metric
 
