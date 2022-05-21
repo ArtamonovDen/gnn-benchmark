@@ -38,10 +38,10 @@ if __name__ == "__main__":
     #  recursive globbing over sub directories of root
     for metric_file in sorted(Path(root).glob(f"**/{args.file}")):
         with open(metric_file, "r") as f:
-            logging.info("Process %s", str(metric_file))
             metrics = json.load(f)
             acc_list.append(float(metrics["test_acc"]))
             f1_list.append(float(metrics["test_f1"]))
+            logging.info("Processes %s. Acc %.4f F1 %.4f", str(metric_file), acc_list[-1], f1_list[-1])
 
     accs, f1s = np.asarray(acc_list), np.asarray(f1_list)
 
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     logging.info("Mean accuracy is %.4f, std accuracy %.4f", mean_acc, std_acc)
     logging.info("Mean f1 is %.4f, std f1 %.4f", mean_f1, std_f1)
 
-    with open(os.path.join(args.save, "test_metric_results.json"), "w") as f:
+    with open(os.path.join(save, "test_metric_results.json"), "w") as f:
         json_results = json.dumps({
             "root": args.root,
             "mean_acc": mean_acc,
