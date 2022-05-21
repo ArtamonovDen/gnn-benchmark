@@ -31,7 +31,7 @@ if __name__ == "__main__":
         root = f"./model_snapshots/dataset_{dataset}/model_{model}"
 
     if args.save is None:
-        save = f"/gdrive/GNN/results/{dataset}_{model}"
+        save = f"/gdrive/MyDrive/GNN/results/{dataset}_{model}"
 
     logging.info("Root path is %s", root)
 
@@ -51,6 +51,7 @@ if __name__ == "__main__":
     logging.info("Mean accuracy is %.4f, std accuracy %.4f", mean_acc, std_acc)
     logging.info("Mean f1 is %.4f, std f1 %.4f", mean_f1, std_f1)
 
+    Path(save).mkdir(parents=True, exist_ok=True)
     with open(os.path.join(save, "test_metric_results.json"), "w") as f:
         json_results = json.dumps({
             "root": args.root,
