@@ -6,6 +6,7 @@ import json
 import numpy as np
 from pathlib import Path
 import sys
+import wandb
 
 
 if __name__ == "__main__":
@@ -18,7 +19,6 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--root",  type=str, help="Root directory to search files with metrics")
     parser.add_argument("-f", "--file", type=str, help="Name of file with metrics to search")
     parser.add_argument("-s", "--save", type=str, help="Path to save results")
-
 
     args = parser.parse_args()
 
@@ -49,3 +49,8 @@ if __name__ == "__main__":
             "std_f1": std_f1,
         }, indent=4, sort_keys=True)
         f.write(json_results)
+
+    wandb_project = f"Eval_{args.root}"
+    with wandb.init(project=wandb_project):
+        wandb.config.update(args)
+        wandb.log({"mean_acc": mean_acc, "mean_f1": mean_f1, "std_acc": std_acc, "std_f1": std_f1})
