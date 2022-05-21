@@ -62,7 +62,8 @@ if __name__ == "__main__":
         }, indent=4, sort_keys=True)
         f.write(json_results)
 
-    wandb_project = f"Eval_{args.root}"
+    wandb_project = f"Eval_{root}"
     with wandb.init(project=wandb_project):
         wandb.config.update(args)
+        wandb.config.update({"root":root})
         wandb.log({"mean_acc": mean_acc, "mean_f1": mean_f1, "std_acc": std_acc, "std_f1": std_f1})
