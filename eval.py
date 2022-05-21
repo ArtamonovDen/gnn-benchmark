@@ -25,15 +25,18 @@ if __name__ == "__main__":
     acc_list, f1_list = [], []
 
     root = args.root
+    dataset = os.getenv("TYPE", "dataset")
+    model = os.getenv("MODEL", "model")
     if args.root is None:
-        dataset = os.getenv("TYPE", "dataset")
-        model = os.getenv("MODEL", "model")
         root = f"./model_snapshots/dataset_{dataset}/model_{model}"
+
+    if args.save is None:
+        save = f"/gdrive/GNN/results/{dataset}_{model}"
 
     logging.info("Root path is %s", root)
 
     #  recursive globbing over sub directories of root
-    for metric_file in sorted(Path(root).glob(f"**/{args.file}.py")):
+    for metric_file in sorted(Path(root).glob(f"**/{args.file}")):
         with open(metric_file, "r") as f:
             logging.info("Process %s", str(metric_file))
             metrics = json.load(f)
