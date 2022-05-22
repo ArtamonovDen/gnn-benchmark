@@ -55,15 +55,15 @@ if __name__ == "__main__":
     with open(os.path.join(save, "test_metric_results.json"), "w") as f:
         json_results = json.dumps({
             "root": root,
-            "mean_acc": mean_acc,
+            "mean_acc": mean_acc, 
             "std_acc": std_acc,
             "mean_f1": mean_f1,
             "std_f1": std_f1,
         }, indent=4, sort_keys=True)
         f.write(json_results)
 
-    wandb_project = f"Eval_{root}"
+    wandb_project = f"Eval_{dataset}_{model}"
     with wandb.init(project=wandb_project):
         wandb.config.update(args)
-        wandb.config.update({"root": f"{dataset}_{model}"})
+        wandb.config.update({"root":root})
         wandb.log({"mean_acc": mean_acc, "mean_f1": mean_f1, "std_acc": std_acc, "std_f1": std_f1})
