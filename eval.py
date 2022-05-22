@@ -65,5 +65,5 @@ if __name__ == "__main__":
     wandb_project = f"Eval_{root}"
     with wandb.init(project=wandb_project):
         wandb.config.update(args)
-        wandb.config.update({"root":root})
+        wandb.config.update({"root": f"{dataset}_{model}"})
         wandb.log({"mean_acc": mean_acc, "mean_f1": mean_f1, "std_acc": std_acc, "std_f1": std_f1})
