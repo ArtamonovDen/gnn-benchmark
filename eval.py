@@ -8,6 +8,8 @@ from pathlib import Path
 import sys
 import wandb
 
+from dataset.transforms import TransformController
+
 
 if __name__ == "__main__":
 
@@ -18,6 +20,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GCN models train script")
     parser.add_argument("-r", "--root",  type=str, help="Root directory to search files with metrics")
     parser.add_argument("-f", "--file", type=str, help="Name of file with metrics to search")
+    parser.add_argument("--transform", type=str, default="deg", help="Node feature transform", choices=TransformController.get_supported_types())
     parser.add_argument("-s", "--save", type=str, help="Path to save results")
 
     args = parser.parse_args()
@@ -28,10 +31,10 @@ if __name__ == "__main__":
     dataset = os.getenv("TYPE", "dataset")
     model = os.getenv("MODEL", "model")
     if args.root is None:
-        root = f"./model_snapshots/dataset_{dataset}/model_{model}"
+        root = f"./model_snapshots/tr_{args.transform}/dataset_{dataset}/model_{model}"
 
     if args.save is None:
-        save = f"/gdrive/MyDrive/GNN/results/{dataset}_{model}"
+        save = f"/gdrive/MyDrive/GNN/results/{dataset}_{model}_{args.transform}"
 
     logging.info("Root path is %s", root)
 

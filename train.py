@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     is_test = args.test_run
 
-    model_path = os.path.join(args.save, f"dataset_{args.type}", f"model_{args.model}", f"{datetime.now().isoformat()}")
+    model_path = os.path.join(args.save, f"tr_{args.transfrom}", f"dataset_{args.type}", f"model_{args.model}", f"{datetime.now().isoformat()}")
     os.makedirs(model_path, exist_ok=True)
 
     logging.info("Running train script with configuration: \n %s", args)
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     best_f1_model_path = os.path.join(model_path, "best_f1.pth")
 
     train_or_test = "test" if is_test else "train"
-    wandb_project = args.wandb_project or f"{args.type}_{args.model}_{train_or_test}"
+    wandb_project = args.wandb_project or f"{args.type}_{args.model}_{args.transform}_{train_or_test}"
 
     with wandb.init(project=wandb_project):
         wandb.watch(model)
