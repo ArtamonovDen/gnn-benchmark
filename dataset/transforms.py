@@ -6,14 +6,23 @@ import torch_geometric.transforms as T
 import igraph as ig
 
 
-class TransfromController:
+class TransformController:
+
+    __supported_types = ("ndd", "deg")
+
     @classmethod
-    def get_transform(transform, max_diam, max_degree, cat=True):
+    def get_transform(cls, transform, max_diam, max_degree, cat=True):
+        if transform not in cls.__supported_types:
+            raise ValueError(f"Transform of type {transform} is not supported")
+
         if transform == "ndd":
             return NDDTransform(max_diam=max_diam, cat=cat)
         elif transform == "deg":
             return T.OneHotDegree(max_degree=max_degree, cat=cat)
-        raise ValueError(f"Transform of type {transform} is not supported")
+
+    @classmethod
+    def get_supported_types(cls):
+        return cls.__supported_types
 
 
 class NDDTransform(BaseTransform):
