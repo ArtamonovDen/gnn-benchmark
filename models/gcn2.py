@@ -9,12 +9,13 @@ from torch_geometric.nn import GCN2Conv, global_add_pool, global_max_pool, globa
 class GCNII(torch.nn.Module):
     def __init__(self, num_node_features, hidden_channels: List[int], num_classes, num_conv=3, dropout=0.5, alpha=0.5, theta=0.1, pooling="mean", **kwargs):
         super(GCNII, self).__init__()
-        conv_h = hidden_channels[0]
+        conv_h, lin_h = hidden_channels
 
         self.pooling = pooling
 
         self.lin1 = Linear(num_node_features, conv_h)
-        self.lin2 = Linear(conv_h, num_classes)
+        self.lin2 = Linear(conv_h, lin_h)
+        self.lin3 = Linear(lin_h, num_classes)
 
         self.convs = ModuleList()
         for layer in range(num_conv):
@@ -46,6 +47,9 @@ class GCNII(torch.nn.Module):
             x = conv(x, x_0, edge_index, edge_weight).relu()
 
         x = self.pool(x, batch)
-        x = self.lin2(x)
+        # x = self.lin2(x) # v1
 
+        x = self.lin2(x).relu()
+        x = F.dropout(x, self.dropout, training=self.training)
+        x = self.lin3(x)
         return x
