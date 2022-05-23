@@ -4,12 +4,23 @@ class TUDatasetWrapper:
 
     __supported_types = ["NCI1", "ENZYMES", "DD", "MUTAG", "PROTEINS"]
 
+    # added manually after analysis
     __degrees = {
         "NCI1": 4,
         "ENZYMES": 9,
         "DD": 19,
         "MUTAG": 4,
         "PROTEINS": 25,
+    }
+
+    # added manually after analysis
+    # TODO
+    __diameters = {
+        "NCI1": 0,
+        "ENZYMES": 37,
+        "DD": 0,  # TODO
+        "MUTAG": 15,
+        "PROTEINS": 64,
     }
 
     @classmethod
@@ -20,4 +31,10 @@ class TUDatasetWrapper:
     def get_max_degree(cls, type):
         if type in cls.__degrees:
             return cls.__degrees[type]
+        raise ValueError("Unsupported dataset type")
+
+    @classmethod
+    def get_max_diameter(cls, type):
+        if type in cls.__diameters:
+            return cls.__diameters[type]
         raise ValueError("Unsupported dataset type")
