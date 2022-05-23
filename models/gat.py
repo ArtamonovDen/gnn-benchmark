@@ -7,12 +7,13 @@ from torch_geometric.nn import GATConv, global_add_pool, global_max_pool, global
 
 
 class GAT(torch.nn.Module):
-    def __init__(self, num_node_features, hidden_channels: List[int], num_classes, num_conv=3, pooling="mean"):
+    def __init__(self, num_node_features, hidden_channels: List[int], num_classes, edge_dim=None, num_conv=3, pooling="mean"):
         super(GAT, self).__init__()
         conv_h, lin_h = hidden_channels
         heads = num_conv  # implicitly
-        self.conv1 = GATConv(num_node_features, conv_h, heads, dropout=0.6) # edge_dim?
-        self.conv2 = GATConv(conv_h * heads, lin_h, heads=1, concat=False, dropout=0.6)
+        edge_dim = edge_dim
+        self.conv1 = GATConv(num_node_features, conv_h, heads, edge_dim=edge_dim, dropout=0.6) # edge_dim?
+        self.conv2 = GATConv(conv_h * heads, lin_h, heads=1, concat=False, edge_dim=edge_dim, dropout=0.6)
 
         self.lin = Linear(lin_h, num_classes)
         self.pooling = pooling

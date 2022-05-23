@@ -7,7 +7,7 @@ from torch_geometric.nn import GCN2Conv, global_add_pool, global_max_pool, globa
 
 
 class GCNII(torch.nn.Module):
-    def __init__(self, num_node_features, hidden_channels: List[int], num_classes, num_conv=3, dropout=0.5, alpha=0.5, theta=0.1, pooling="mean"):
+    def __init__(self, num_node_features, hidden_channels: List[int], num_classes, num_conv=3, dropout=0.5, alpha=0.5, theta=0.1, pooling="mean", **kwargs):
         super(GCNII, self).__init__()
         conv_h = hidden_channels[0]
 

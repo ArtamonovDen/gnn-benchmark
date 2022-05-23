@@ -26,7 +26,7 @@ def train(weighted):
         out = model(
             x=data.x,
             edge_index=data.edge_index,
-            # edge_attr=data.edge_attr, # TODO
+            edge_attr=data.edge_attr,
             edge_weight=edge_weight,
             batch=data.batch,
         )
@@ -50,7 +50,7 @@ def test(loader, model, weighted, binary=True):
         outputs = model(
             x=data.x,
             edge_index=data.edge_index,
-            # edge_attr=data.edge_attr,
+            edge_attr=data.edge_attr,
             edge_weight=edge_weight,
             batch=data.batch,
         )
@@ -126,6 +126,9 @@ if __name__ == "__main__":
 
     device = choose_device(args)
 
+    edge_attr = dataset[0].edge_attr
+    edge_dim = edge_attr.shape[1] if edge_attr else None
+
     model = ModelController.get_model(
         model_name=args.model,
         num_node_features=dataset.num_node_features,
@@ -133,6 +136,7 @@ if __name__ == "__main__":
         num_classes=dataset.num_classes,
         num_conv=args.conv_num,
         pooling=args.conv_pooling,
+        edge_dim=edge_dim
     ).to(device)
 
     logging.info(
