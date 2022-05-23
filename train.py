@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     is_test = args.test_run
 
-    model_path = os.path.join(args.save, f"tr_{args.transfrom}", f"dataset_{args.type}", f"model_{args.model}", f"{datetime.now().isoformat()}")
+    model_path = os.path.join(args.save, f"tr_{args.transform}", f"dataset_{args.type}", f"model_{args.model}", f"{datetime.now().isoformat()}")
     os.makedirs(model_path, exist_ok=True)
 
     logging.info("Running train script with configuration: \n %s", args)
