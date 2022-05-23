@@ -16,7 +16,7 @@ class TransformController:
             raise ValueError(f"Transform of type {transform} is not supported")
 
         if transform == "ndd":
-            return NDDTransform(max_diameter=max_diam, cat=cat)
+            return NDDTransform(max_diameter=max_diam, cat=False) # TODO: do not use with one hot encoded
         elif transform == "deg":
             return T.OneHotDegree(max_degree=max_degree, cat=cat)
         else:
