@@ -127,7 +127,7 @@ if __name__ == "__main__":
     device = choose_device(args)
 
     edge_attr = dataset[0].edge_attr
-    edge_dim = edge_attr.shape[1] if edge_attr else None
+    edge_dim = edge_attr.shape[1] if edge_attr is None else None
 
     model = ModelController.get_model(
         model_name=args.model,
