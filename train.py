@@ -113,7 +113,7 @@ if __name__ == "__main__":
     if not is_test:
         torch.manual_seed(42)
 
-    dataset = DatasetController.get_dataset(args.type, args.root, args.transform)
+    dataset = DatasetController.get_dataset(args.type, args.root, args.transform, args.no_cat)
     dataset = dataset.shuffle()
 
     if is_test:

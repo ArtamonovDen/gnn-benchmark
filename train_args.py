@@ -23,6 +23,7 @@ def parse():
     parser.add_argument("--conv_num", type=int, default=3, help="Number of convolution layers in GCN")
     parser.add_argument("--conv_pooling", type=str, default="mean", help="Pooling strategy to get whole graph embedding", choices=["max","mean","add"])
     parser.add_argument("--transform", type=str, default="deg", help="Node feature transform", choices=TransformController.get_supported_types())
+    parser.add_argument("--no_cat", action='store_false', help="Do not Concat transform feature with node labels")
 
     args = parser.parse_args()
     return args

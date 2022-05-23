@@ -8,7 +8,7 @@ import igraph as ig
 
 class TransformController:
 
-    __supported_types = ("ndd", "deg")
+    __supported_types = ("ndd", "deg", "none")
 
     @classmethod
     def get_transform(cls, transform, max_diam, max_degree, cat=True):
@@ -16,9 +16,11 @@ class TransformController:
             raise ValueError(f"Transform of type {transform} is not supported")
 
         if transform == "ndd":
-            return NDDTransform(max_diam=max_diam, cat=cat)
+            return NDDTransform(max_diameter=max_diam, cat=cat)
         elif transform == "deg":
             return T.OneHotDegree(max_degree=max_degree, cat=cat)
+        else:
+            return None
 
     @classmethod
     def get_supported_types(cls):
@@ -38,7 +40,7 @@ class NDDTransform(BaseTransform):
 
         x = data.x
 
-        undirected = is_undirected(data)
+        undirected = is_undirected(data.edge_index)
         g = to_networkx(data, to_undirected=undirected)
         g = ig.Graph.from_networkx(g)
 
@@ -51,7 +53,7 @@ class NDDTransform(BaseTransform):
         distance_histogram = np.array([np.histogram(sp[v], bins=bins)[0] for v in range(0, num_nodes)])
 
         distrib_mat = distance_histogram / (num_nodes - 1)
-        distrib_mat = torch.from_numpy(distrib_mat, dtype=torch.Float)
+        distrib_mat = torch.from_numpy(distrib_mat).to(torch.float)
 
         if x is not None and self.cat:
             x = x.view(-1, 1) if x.dim() == 1 else x
