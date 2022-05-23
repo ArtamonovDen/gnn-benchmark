@@ -26,7 +26,7 @@ def train(weighted):
         out = model(
             x=data.x,
             edge_index=data.edge_index,
-            edge_attr=data.edge_attr,
+            # edge_attr=data.edge_attr, # TODO
             edge_weight=edge_weight,
             batch=data.batch,
         )
@@ -50,7 +50,7 @@ def test(loader, model, weighted, binary=True):
         outputs = model(
             x=data.x,
             edge_index=data.edge_index,
-            edge_attr=data.edge_attr,
+            # edge_attr=data.edge_attr,
             edge_weight=edge_weight,
             batch=data.batch,
         )
