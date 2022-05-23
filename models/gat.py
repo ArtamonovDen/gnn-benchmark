@@ -12,7 +12,7 @@ class GAT(torch.nn.Module):
         conv_h, lin_h = hidden_channels
         heads = num_conv  # implicitly
         self.conv1 = GATConv(num_node_features, conv_h, heads, dropout=0.6)
-        self.conv2 = GATConv(hidden_channels * heads, lin_h, heads=1, concat=False, dropout=0.6)
+        self.conv2 = GATConv(conv_h * heads, lin_h, heads=1, concat=False, dropout=0.6)
 
         self.lin = Linear(lin_h, num_classes)
         self.pooling = pooling
