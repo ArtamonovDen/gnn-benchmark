@@ -1,4 +1,5 @@
 import argparse
+from dataset.transforms import TransformController
 
 from models.model_controller import ModelController
 
@@ -21,6 +22,7 @@ def parse():
     parser.add_argument("--test_ratio", type=float, default=0.2, help="Train/Test split ratio")
     parser.add_argument("--conv_num", type=int, default=3, help="Number of convolution layers in GCN")
     parser.add_argument("--conv_pooling", type=str, default="mean", help="Pooling strategy to get whole graph embedding", choices=["max","mean","add"])
+    parser.add_argument("--transform", type=str, default="deg", help="Node feature transform", choices=TransformController.get_supported_types())
 
     args = parser.parse_args()
     return args
