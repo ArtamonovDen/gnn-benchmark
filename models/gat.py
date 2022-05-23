@@ -11,7 +11,7 @@ class GAT(torch.nn.Module):
         super(GAT, self).__init__()
         conv_h, lin_h = hidden_channels
         heads = num_conv  # implicitly
-        self.conv1 = GATConv(num_node_features, conv_h, heads, dropout=0.6)
+        self.conv1 = GATConv(num_node_features, conv_h, heads, dropout=0.6) # edge_dim?
         self.conv2 = GATConv(conv_h * heads, lin_h, heads=1, concat=False, dropout=0.6)
 
         self.lin = Linear(lin_h, num_classes)
@@ -26,7 +26,7 @@ class GAT(torch.nn.Module):
             return global_add_pool(x, batch)
         raise ValueError("Wrong pooling strategy")
 
-    def forward(self, x, edge_index, batch, edge_attr, **kwargs):
+    def forward(self, x, edge_index, batch, edge_attr=None, **kwargs):
 
         x = F.dropout(x, p=0.6, training=self.training)
         x = F.elu(self.conv1(x, edge_index, edge_attr))
