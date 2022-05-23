@@ -2,15 +2,19 @@ import torch
 from torch_geometric.transforms import BaseTransform
 from torch_geometric.utils import is_undirected, to_networkx
 import numpy as np
+import torch_geometric.transforms as T
 import igraph as ig
 
+
 class TransfromController:
-    ...
-    # TODO manage transfroms
+    @classmethod
+    def get_transform(transform, max_diam, max_degree, cat=True):
+        if transform == "ndd":
+            return NDDTransform(max_diam=max_diam, cat=cat)
+        elif transform == "deg":
+            return T.OneHotDegree(max_degree=max_degree, cat=cat)
+        raise ValueError(f"Transform of type {transform} is not supported")
 
-
-
-# TODO: add class from NDD transform (like max degree transfrom)
 
 class NDDTransform(BaseTransform):
     """
@@ -18,7 +22,7 @@ class NDDTransform(BaseTransform):
     to node features
     """
     def __init__(self, max_diameter, cat=True):
-        self.max_deameter = max_diameter + 1
+        self.max_diameter = max_diameter + 1
         self.cat = cat
 
     def __call__(self, data):
@@ -30,7 +34,7 @@ class NDDTransform(BaseTransform):
         g = ig.Graph.from_networkx(g)
 
         num_nodes = g.vcount()
-        bins = np.append(np.arange(0, self.max_deameter), float('inf'))
+        bins = np.append(np.arange(0, self.max_diameter), float('inf'))
 
         mode_g = "ALL" if undirected else "OUT"
         sp = g.shortest_paths_dijkstra(mode=mode_g)
@@ -49,4 +53,4 @@ class NDDTransform(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.max_degree})'
+        return "{self.__class__.__name__}({self.max_diameter})"

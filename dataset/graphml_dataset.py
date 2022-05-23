@@ -9,7 +9,6 @@ import pandas as pd
 
 from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.utils import to_undirected
-import torch_geometric.transforms as T
 from dataset.igraph_tools import get_edges_with_weghts_from_igraph
 
 
@@ -19,15 +18,15 @@ class GraphmlInMemoryDataset(InMemoryDataset):
         KIDNEY = "kidney_metabolic"
         ALL = [BRAIN, KIDNEY]
 
-    def __init__(self, type, root, label_path=None):
+    def __init__(self, type, root, transform=None, pre_transform=None, label_path=None):
         self.label_path = label_path
         self.type = type
         if label_path:
             # may be skipped if dataset is already preprocessed
             self.label_encoder = preprocessing.LabelEncoder()
             self.labels = self.init_graph_labels()
-        super().__init__(root, transform=T.OneHotDegree(max_degree=self.max_degree2dataset[type]), pre_transform=None)
-        # super().__init__(root, transform=None, pre_transform=None)
+
+        super().__init__(root, transform=transform, pre_transform=pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
@@ -52,7 +51,11 @@ class GraphmlInMemoryDataset(InMemoryDataset):
 
     @property
     def max_degree2dataset(self):
-        return {self.Type.BRAIN: 238, self.Type.KIDNEY: 105}  # TODO
+        return {self.Type.BRAIN: 238, self.Type.KIDNEY: 105}
+
+    @property
+    def max_diam2dataset(self):
+        return {self.Type.BRAIN: 10, self.Type.KIDNEY: 10} # TODO
 
     @property
     def num_classes(self):
