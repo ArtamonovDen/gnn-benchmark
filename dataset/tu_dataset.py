@@ -14,11 +14,10 @@ class TUDatasetWrapper:
     }
 
     # added manually after analysis
-    # TODO
     __diameters = {
-        "NCI1": 0,
+        "NCI1": 0, # TODO
         "ENZYMES": 37,
-        "DD": 0,  # TODO
+        "DD": 83,
         "MUTAG": 15,
         "PROTEINS": 64,
     }
