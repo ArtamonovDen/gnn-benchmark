@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import os
 from typing import List
@@ -18,6 +19,10 @@ class GraphmlInMemoryDataset(InMemoryDataset):
         KIDNEY = "kidney_metabolic"
         ALL = [BRAIN, KIDNEY]
 
+    __degrees = {Type.BRAIN: 238, Type.KIDNEY: 105}
+    __diameters = {Type.BRAIN: 2, Type.KIDNEY: 7}
+    __classes = {Type.BRAIN: 2, Type.KIDNEY: 3}
+
     def __init__(self, type, root, transform=None, pre_transform=None, label_path=None):
         self.label_path = label_path
         self.type = type
@@ -28,6 +33,14 @@ class GraphmlInMemoryDataset(InMemoryDataset):
 
         super().__init__(root, transform=transform, pre_transform=pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
+
+    @classmethod
+    def get_max_degree(cls, type):
+        return cls.__degrees[type]
+
+    @classmethod
+    def get_max_diameter(cls, type):
+        return cls.__diameters[type]
 
     @property
     def raw_dir(self) -> str:
@@ -55,11 +68,11 @@ class GraphmlInMemoryDataset(InMemoryDataset):
 
     @property
     def max_diam2dataset(self):
-        return {self.Type.BRAIN: 10, self.Type.KIDNEY: 10} # TODO
+        return {self.Type.BRAIN: 2, self.Type.KIDNEY: 7}
 
     @property
     def num_classes(self):
-        return self.classes2dataset.get(self.type)
+        return self.__classes.get(self.type)
 
     def init_graph_labels(self):
 
@@ -107,6 +120,10 @@ class GraphmlInMemoryDataset(InMemoryDataset):
             graph_data_list.append(data)
             print(f"{i}| Saving Data object {data}")
 
-        print(f"Skipped {len(skipped)}: {skipped}")
+        logging.info("Applying pre_transform function %r", self.pre_transform)
+        if self.pre_transform is not None:
+            graph_data_list = [self.pre_transform(data) for data in graph_data_list]
+
+        logging.info("Skipped %d:%r", len(skipped), skipped)
         data, slices = self.collate(graph_data_list)
         torch.save((data, slices), self.processed_paths[0])

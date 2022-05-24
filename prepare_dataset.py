@@ -2,6 +2,8 @@ import os
 from dataset.dataset_controller import DatasetController
 from dataset.graphml_dataset import GraphmlInMemoryDataset
 from torch_geometric import utils
+import logging
+import sys
 
 
 def check_max_degree(dataset):
@@ -12,8 +14,15 @@ def check_max_degree(dataset):
 
 
 if __name__ == "__main__":
-    root = "/home/friday/projects/hse_gnn/datasets/cbs-datasets/BrainfMRI"
+    logging.basicConfig(
+        stream=sys.stdout,  format='[%(asctime)s] %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %I:%M:%S'
+    )
+
+    # root = "/home/friday/projects/hse_gnn/datasets/cbs-datasets/BrainfMRI"
+    # type = GraphmlInMemoryDataset.Type.BRAIN
+    root = "/home/friday/projects/hse_gnn/datasets/cbs-datasets/KidneyMetabolic"
+    type = GraphmlInMemoryDataset.Type.KIDNEY
     label_path = os.path.join(root, "labels.txt")
 
-    dataset = DatasetController.get_dataset(type=GraphmlInMemoryDataset.Type.BRAIN, root=root, label_path=label_path)
+    dataset = DatasetController.get_dataset(type=type, root=root, label_path=label_path, transform_type="deg") # TODO add transforms info
     print(dataset)

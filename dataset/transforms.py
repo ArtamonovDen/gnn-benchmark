@@ -64,4 +64,4 @@ class NDDTransform(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return "{self.__class__.__name__}({self.max_diameter})"
+        return f"{self.__class__.__name__}({self.max_diameter})"
